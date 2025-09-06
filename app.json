@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "myApp",
-    "slug": "myApp",
+    "name": "SingHisWord",
+    "slug": "singhisword",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "singhisword",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -16,7 +16,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "package": "com.hanokalure.singhisword"
     },
     "web": {
       "bundler": "metro",
@@ -24,7 +24,6 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
       [
         "expo-splash-screen",
         {
@@ -35,8 +34,10 @@
         }
       ]
     ],
-    "experiments": {
-      "typedRoutes": true
+    "extra": {
+      "eas": {
+        "projectId": "242a86b7-e10e-4dc8-ae8b-d97e09df5386"
+      }
     }
   }
 }
