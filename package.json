@@ -1,12 +1,11 @@
 {
   "name": "singhisword",
-  "main": "node_modules/expo/AppEntry.js",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start",
+    "start": "expo start --dev-client",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint"
   },
@@ -34,7 +33,7 @@
     "expo-web-browser": "~14.2.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "react-native": "0.79.5",
+    "react-native": "^0.79.5",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-google-cast": "^4.8.0",
     "react-native-reanimated": "~3.17.4",
