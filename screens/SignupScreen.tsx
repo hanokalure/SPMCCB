@@ -120,7 +120,16 @@ const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         console.error('Signup error:', error);
         
         // Show user-friendly error messages
-        if (error.message?.includes('User already registered')) {
+        if (error.isNetworkError || error.message?.includes('fetch') || error.message?.includes('network')) {
+          Alert.alert(
+            'Network Error', 
+            'Unable to connect to the server. Please check your internet connection and try again.\n\nTip: If you\'re using mobile data, try switching to WiFi or check your mobile data settings.',
+            [
+              { text: 'Retry', onPress: () => handleSignup() },
+              { text: 'Cancel', style: 'cancel' }
+            ]
+          );
+        } else if (error.message?.includes('User already registered')) {
           Alert.alert('Account Exists', 'An account with this email already exists. Please try signing in instead.');
         } else if (error.message?.includes('Password should be at least')) {
           Alert.alert('Weak Password', 'Please choose a stronger password with at least 6 characters.');
@@ -128,6 +137,8 @@ const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
           Alert.alert('Invalid Email', 'Please enter a valid email address.');
         } else if (error.message?.includes('Signup requires a valid password')) {
           Alert.alert('Invalid Password', 'Please enter a valid password.');
+        } else if (error.message?.includes('Email rate limit exceeded')) {
+          Alert.alert('Too Many Attempts', 'Too many signup attempts. Please wait a few minutes before trying again.');
         } else {
           Alert.alert('Signup Failed', error.message || 'An error occurred during signup. Please try again.');
         }

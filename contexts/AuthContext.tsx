@@ -55,14 +55,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Sign up new user
   const signUp = async (email: string, password: string) => {
     console.log('🔐 AuthProvider: Attempting sign up for:', email);
+    console.log('🔐 AuthProvider: Supabase URL:', supabaseClient.supabaseUrl);
+    
     try {
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: 'https://singhisword-verification-website.vercel.app/',
+        },
       });
 
       if (error) {
         console.error('🔐 AuthProvider: Sign up error:', error);
+        console.error('🔐 AuthProvider: Error details:', JSON.stringify(error, null, 2));
+        
+        // Add network-specific error handling
+        if (error.message?.includes('fetch') || error.message?.includes('network') || error.message?.includes('Failed to fetch')) {
+          return { 
+            error: {
+              ...error,
+              message: 'Network connection failed. Please check your internet connection and try again. If you\'re on mobile data, try switching to WiFi.',
+              isNetworkError: true
+            }
+          };
+        }
+        
         return { error };
       }
 
