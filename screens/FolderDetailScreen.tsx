@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   FlatList,
@@ -6,6 +6,7 @@ import {
   RefreshControl,
   Text,
   Alert,
+  Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Song, Folder } from '../constants/Config';
@@ -134,9 +135,9 @@ const FolderDetailScreen: React.FC<FolderDetailScreenProps> = ({ route, navigati
     navigation.navigate('Lyrics', { song });
   };
 
-  const handleSearch = (query: string) => {
+  const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
-  };
+  }, []);
 
   const handleAddSongs = () => {
     if (isOffline) {
@@ -219,7 +220,7 @@ const FolderDetailScreen: React.FC<FolderDetailScreenProps> = ({ route, navigati
     />
   );
 
-  const renderEmpty = () => (
+  const renderEmpty = useCallback(() => (
     <View style={styles.emptyContainer}>
       <Text style={[styles.emptyTitle, { color: colors.text }]}>
         {searchQuery ? 'No songs found' : 'No songs in this folder'}
@@ -245,33 +246,28 @@ const FolderDetailScreen: React.FC<FolderDetailScreenProps> = ({ route, navigati
         </Text>
       )}
     </View>
-  );
+  ), [searchQuery, isOffline, colors.text, colors.subText, folder.name, handleAddSongs, loading]);
 
-  const renderHeader = () => (
+  const renderHeader = useMemo(() => (
     <View style={styles.header}>
-      <SearchBar
-        placeholder={`Search in ${folder.name}...`}
-        onSearch={handleSearch}
-        debounceMs={300}
-      />
+      <View style={styles.searchSection}>
+        <SearchBar
+          placeholder={`Search in ${folder.name}...`}
+          onSearch={handleSearch}
+          value={searchQuery}
+        />
+      </View>
       
       {isOffline && (
-        <View style={styles.offlineBanner}>
-          <Text style={[styles.offlineBannerText, { color: colors.subText }]}>
-            📱 Offline - Showing cached data
+        <View style={[styles.statusBanner, { backgroundColor: colors.subText + '15' }]}>
+          <Text style={[styles.statusText, { color: colors.subText }]}>
+            📱 Offline Mode - Showing cached data
           </Text>
         </View>
       )}
       
-      <View style={styles.statsContainer}>
-        <Text style={[styles.statsText, { color: colors.subText }]}>
-          {searchQuery
-            ? `${filteredSongs.length} songs found`
-            : `${folderSongs.length} songs in this folder`}
-        </Text>
-      </View>
     </View>
-  );
+  ), [searchQuery, isOffline, colors.subText, handleSearch, filteredSongs.length, folderSongs.length, folder.name]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -289,8 +285,12 @@ const FolderDetailScreen: React.FC<FolderDetailScreenProps> = ({ route, navigati
             tintColor={settings.theme === 'light' ? '#805ad5' : '#b794f6'}
           />
         }
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={filteredSongs.length === 0 ? styles.emptyList : undefined}
+        showsVerticalScrollIndicator={true}
+        contentContainerStyle={filteredSongs.length === 0 ? styles.emptyList : styles.listContainer}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
+        removeClippedSubviews={false}
+        getItemLayout={undefined}
       />
       
       {/* Floating Action Button for adding songs */}
@@ -316,7 +316,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 8,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  searchSection: {
+    paddingHorizontal: Platform.OS === 'web' ? 16 : 8,
+    paddingBottom: 16,
+  },
+  statusBanner: {
+    marginHorizontal: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  statusText: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  listContainer: {
+    paddingBottom: Platform.OS === 'ios' ? 120 : 100,
   },
   offlineBanner: {
     paddingHorizontal: 16,

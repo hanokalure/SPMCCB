@@ -71,11 +71,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.error('🔐 AuthProvider: Error details:', JSON.stringify(error, null, 2));
         
         // Add network-specific error handling
-        if (error.message?.includes('fetch') || error.message?.includes('network') || error.message?.includes('Failed to fetch')) {
+        if (error.message?.includes('fetch') || 
+            error.message?.includes('network') || 
+            error.message?.includes('Failed to fetch') ||
+            error.message?.includes('NetworkError') ||
+            error.message?.includes('NETWORK_REQUEST_FAILED') ||
+            error.code === 'NETWORK_ERROR') {
+          console.log('🌐 Network error detected, checking environment variables...');
+          console.log('🌐 Supabase URL configured:', !!process.env.EXPO_PUBLIC_SUPABASE_URL);
+          console.log('🌐 Supabase Key configured:', !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
+          
           return { 
             error: {
               ...error,
-              message: 'Network connection failed. Please check your internet connection and try again. If you\'re on mobile data, try switching to WiFi.',
+              message: 'Network connection failed. Please check your internet connection and try again. If you\'re on mobile data, try switching to WiFi. Make sure the app has network permissions.',
               isNetworkError: true
             }
           };

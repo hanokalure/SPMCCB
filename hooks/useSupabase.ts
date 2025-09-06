@@ -29,6 +29,7 @@ interface UseSupabaseReturn {
   addSongToFolder: (songId: number, folderId: number) => Promise<ApiResponse<SongFolder>>;
   removeSongFromFolder: (songId: number, folderId: number) => Promise<ApiResponse<boolean>>;
   getFolderSongs: (folderId: number) => Promise<ApiResponse<Song[]>>;
+  getFolderSongCount: (folderId: number) => Promise<number>;
   
   // Sync operations
   syncAllData: () => Promise<ApiResponse<boolean>>;
@@ -193,6 +194,13 @@ export const useSupabase = (): UseSupabaseReturn => {
     setError(null);
     
     try {
+      // Check if already favourite to prevent duplicates
+      const existingFav = cachedFavourites.find(fav => fav.song_id === songId && fav.user_id === user.id);
+      if (existingFav) {
+        console.log('Song already in favourites:', songId);
+        return { data: existingFav, error: null };
+      }
+
       const { data, error: supabaseError } = await supabaseClient
         .from('favourites')
         .insert({
@@ -207,8 +215,11 @@ export const useSupabase = (): UseSupabaseReturn => {
         return { data: null, error: supabaseError.message };
       }
 
-      // Refresh favourites cache
-      await fetchFavourites();
+      console.log('❤️ Added to favourites:', songId, 'Data:', data);
+
+      // Immediately update cache with new favourite
+      const updatedFavourites = [...cachedFavourites, data];
+      await updateCache({ favourites: updatedFavourites });
 
       return { data, error: null };
     } catch (err) {
@@ -218,7 +229,7 @@ export const useSupabase = (): UseSupabaseReturn => {
     } finally {
       setLoading(false);
     }
-  }, [user, fetchFavourites]);
+  }, [user, cachedFavourites, updateCache]);
 
   const removeFavourite = useCallback(async (songId: number): Promise<ApiResponse<boolean>> => {
     if (!user) {
@@ -240,8 +251,13 @@ export const useSupabase = (): UseSupabaseReturn => {
         return { data: false, error: supabaseError.message };
       }
 
-      // Refresh favourites cache
-      await fetchFavourites();
+      console.log('💔 Removed from favourites:', songId);
+
+      // Immediately update cache by removing the favourite
+      const updatedFavourites = cachedFavourites.filter(
+        fav => !(fav.song_id === songId && fav.user_id === user.id)
+      );
+      await updateCache({ favourites: updatedFavourites });
 
       return { data: true, error: null };
     } catch (err) {
@@ -251,7 +267,7 @@ export const useSupabase = (): UseSupabaseReturn => {
     } finally {
       setLoading(false);
     }
-  }, [user, fetchFavourites]);
+  }, [user, cachedFavourites, updateCache]);
 
   const isFavourite = useCallback((songId: number): boolean => {
     if (!user) return false;
@@ -482,6 +498,25 @@ export const useSupabase = (): UseSupabaseReturn => {
     }
   }, []);
 
+  const getFolderSongCount = useCallback(async (folderId: number): Promise<number> => {
+    try {
+      const { count, error: supabaseError } = await supabaseClient
+        .from('song_folders')
+        .select('*', { count: 'exact', head: true })
+        .eq('folder_id', folderId);
+
+      if (supabaseError) {
+        console.error('Error getting folder song count:', supabaseError.message);
+        return 0;
+      }
+
+      return count || 0;
+    } catch (err) {
+      console.error('Error getting folder song count:', err);
+      return 0;
+    }
+  }, []);
+
   // ===== SYNC OPERATIONS =====
   const syncAllData = useCallback(async (): Promise<ApiResponse<boolean>> => {
     setLoading(true);
@@ -530,6 +565,7 @@ export const useSupabase = (): UseSupabaseReturn => {
     addSongToFolder,
     removeSongFromFolder,
     getFolderSongs,
+    getFolderSongCount,
     syncAllData,
   };
 };

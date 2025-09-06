@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   FlatList,
@@ -6,6 +6,7 @@ import {
   RefreshControl,
   Text,
   Alert,
+  Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Song } from '../constants/Config';
@@ -117,9 +118,9 @@ const FavouritesScreen: React.FC<FavouritesScreenProps> = ({ navigation }) => {
     navigation.navigate('Lyrics', { song });
   };
 
-  const handleSearch = (query: string) => {
+  const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
-  };
+  }, []);
 
   const renderSong = ({ item }: { item: Song }) => (
     <SongCard
@@ -130,7 +131,7 @@ const FavouritesScreen: React.FC<FavouritesScreenProps> = ({ navigation }) => {
     />
   );
 
-  const renderEmpty = () => (
+  const renderEmpty = useCallback(() => (
     <View style={styles.emptyContainer}>
       <Text style={[styles.emptyTitle, { color: colors.text }]}>
         {searchQuery ? 'No favourites found' : 'No favourite songs yet'}
@@ -155,33 +156,28 @@ const FavouritesScreen: React.FC<FavouritesScreenProps> = ({ navigation }) => {
         </Text>
       )}
     </View>
-  );
+  ), [searchQuery, isOffline, colors.text, colors.subText, navigation]);
 
-  const renderHeader = () => (
+  const renderHeader = useMemo(() => (
     <View style={styles.header}>
-      <SearchBar
-        placeholder="Search your favourite songs..."
-        onSearch={handleSearch}
-        debounceMs={300}
-      />
+      <View style={styles.searchSection}>
+        <SearchBar
+          placeholder="Search your favourite songs..."
+          onSearch={handleSearch}
+          value={searchQuery}
+        />
+      </View>
       
       {isOffline && (
-        <View style={styles.offlineBanner}>
-          <Text style={[styles.offlineBannerText, { color: colors.subText }]}>
-            📱 Offline - Showing cached data
+        <View style={[styles.statusBanner, { backgroundColor: colors.subText + '15' }]}>
+          <Text style={[styles.statusText, { color: colors.subText }]}>
+            📱 Offline Mode - Showing cached data
           </Text>
         </View>
       )}
       
-      <View style={styles.statsContainer}>
-        <Text style={[styles.statsText, { color: colors.subText }]}>
-          {searchQuery
-            ? `${filteredSongs.length} favourites found`
-            : `${favouriteSongs.length} favourite ${favouriteSongs.length === 1 ? 'song' : 'songs'}`}
-        </Text>
-      </View>
     </View>
-  );
+  ), [searchQuery, isOffline, colors.subText, handleSearch, filteredSongs.length, favouriteSongs.length]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -199,8 +195,12 @@ const FavouritesScreen: React.FC<FavouritesScreenProps> = ({ navigation }) => {
             tintColor={settings.theme === 'light' ? '#e53e3e' : '#fc8181'}
           />
         }
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={filteredSongs.length === 0 ? styles.emptyList : undefined}
+        showsVerticalScrollIndicator={true}
+        contentContainerStyle={filteredSongs.length === 0 ? styles.emptyList : styles.listContainer}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
+        removeClippedSubviews={false}
+        getItemLayout={undefined}
       />
       
       {error && (
@@ -217,7 +217,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 8,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  searchSection: {
+    paddingHorizontal: Platform.OS === 'web' ? 16 : 8,
+    paddingBottom: 16,
+  },
+  statusBanner: {
+    marginHorizontal: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  statusText: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  listContainer: {
+    paddingBottom: Platform.OS === 'ios' ? 120 : 100,
   },
   offlineBanner: {
     paddingHorizontal: 16,

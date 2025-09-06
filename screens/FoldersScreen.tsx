@@ -22,10 +22,11 @@ interface FoldersScreenProps {
 
 const FoldersScreen: React.FC<FoldersScreenProps> = ({ navigation }) => {
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [folderSongCounts, setFolderSongCounts] = useState<{[key: number]: number}>({});
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   
-  const { fetchFolders, createFolder, loading, error } = useSupabase();
+  const { fetchFolders, createFolder, getFolderSongCount, loading, error } = useSupabase();
   const { getFolders, settings, isOffline } = useOffline();
 
   // Theme colors
@@ -48,17 +49,54 @@ const FoldersScreen: React.FC<FoldersScreenProps> = ({ navigation }) => {
       const result = await fetchFolders();
       if (result.data) {
         setFolders(result.data);
+        // Load song counts for each folder
+        await loadFolderSongCounts(result.data);
       } else {
         // Fall back to cached data
         const cachedFolders = getFolders();
         setFolders(cachedFolders);
+        await loadFolderSongCounts(cachedFolders);
       }
     } catch (err) {
       console.error('Error loading folders:', err);
       // Use cached data as fallback
       const cachedFolders = getFolders();
       setFolders(cachedFolders);
+      await loadFolderSongCounts(cachedFolders);
     }
+  };
+
+  const loadFolderSongCounts = async (foldersList: Folder[]) => {
+    if (isOffline) {
+      // In offline mode, we can't get accurate counts, so set to 0
+      const counts: {[key: number]: number} = {};
+      foldersList.forEach(folder => {
+        if (folder.id) {
+          counts[folder.id] = 0;
+        }
+      });
+      setFolderSongCounts(counts);
+      return;
+    }
+
+    const counts: {[key: number]: number} = {};
+    
+    // Load song counts for each folder concurrently
+    await Promise.all(
+      foldersList.map(async (folder) => {
+        if (folder.id) {
+          try {
+            const count = await getFolderSongCount(folder.id);
+            counts[folder.id] = count;
+          } catch (err) {
+            console.error(`Error getting song count for folder ${folder.id}:`, err);
+            counts[folder.id] = 0;
+          }
+        }
+      })
+    );
+    
+    setFolderSongCounts(counts);
   };
 
   const handleRefresh = async () => {
@@ -98,15 +136,19 @@ const FoldersScreen: React.FC<FoldersScreenProps> = ({ navigation }) => {
     setShowCreateModal(false);
   };
 
-  const renderFolder = ({ item }: { item: Folder }) => (
-    <FolderCard
-      folder={item}
-      onPress={handleFolderPress}
-      showMenuButton={true}
-      songCount={0} // This would be calculated in a real implementation
-      onFolderUpdate={loadFolders} // Refresh folder list when folder is updated or deleted
-    />
-  );
+  const renderFolder = ({ item }: { item: Folder }) => {
+    const songCount = item.id ? (folderSongCounts[item.id] || 0) : 0;
+    
+    return (
+      <FolderCard
+        folder={item}
+        onPress={handleFolderPress}
+        showMenuButton={true}
+        songCount={songCount}
+        onFolderUpdate={loadFolders} // Refresh folder list when folder is updated or deleted
+      />
+    );
+  };
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
@@ -144,11 +186,6 @@ const FoldersScreen: React.FC<FoldersScreenProps> = ({ navigation }) => {
         </View>
       )}
       
-      <View style={styles.statsContainer}>
-        <Text style={[styles.statsText, { color: colors.subText }]}>
-          {folders.length} {folders.length === 1 ? 'folder' : 'folders'}
-        </Text>
-      </View>
       
       <Text style={[styles.instructionText, { color: colors.subText }]}>
         Organize your songs into custom folders. Tap a folder to view its contents, or use the menu to rename or delete folders.
